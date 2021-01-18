@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 2.8)
 
 project(rgbd-odometry)
 
+#set(CMAKE_BUILD_TYPE "Debug")
+#set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
+
 #c++11
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
@@ -26,11 +29,18 @@ else()
 endif()
 
 file(GLOB TARGET_SRC
-    src/*.cpp
+    #src/*.cpp
+    src/main.cpp
+    src/opencv_odometry/*.cpp
+)
+file(GLOB TARGET_SRC2
+    src/vo.cpp
     src/opencv_odometry/*.cpp
 )
 
 include_directories(${OpenCV_INCLUDE_DIRS} include)
 
 add_executable(rgbd-odometry ${TARGET_SRC})
+add_executable(rgbd-odometry-liyang ${TARGET_SRC2})
 target_link_libraries (rgbd-odometry ${OpenCV_LIBS})
+target_link_libraries (rgbd-odometry-liyang ${OpenCV_LIBS})

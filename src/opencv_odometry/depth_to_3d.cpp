@@ -31,6 +31,8 @@ the use of this software, even if advised of the possibility of such damage.
 
 #include <opencv_odometry/depth_to_3d.hpp>
 #include <opencv_odometry/rgbd.hpp>
+#include <iostream>
+using namespace std;
 
 namespace cv
 {
@@ -140,6 +142,8 @@ namespace rgbd
     else
       rescaleDepthTemplated<T>(in_depth, z_mat);
 
+    //cout << "liyang test" << in_depth << endl;
+    //exit(1);
     // Pre-compute some constants
     cv::Mat_<T> x_cache(1, in_depth.cols), y_cache(in_depth.rows, 1);
     T* x_cache_ptr = x_cache[0], *y_cache_ptr = y_cache[0];
@@ -160,6 +164,10 @@ namespace rgbd
         (*point)[0] = (*x_cache_ptr) * z;
         (*point)[1] = (*y_cache_ptr) * z;
         (*point)[2] = z;
+        //cout << "liyang test" << (*point)[0] << endl;
+        //cout << "liyang test" << (*point)[1] << endl;
+        //cout << "liyang test" << (*point)[2] << endl;
+        //exit(1);
       }
     }
   }

@@ -47,6 +47,8 @@ the use of this software, even if advised of the possibility of such damage.
 #include <opencv2/core/eigen.hpp>
 #endif
 
+using namespace std;
+
 namespace cv
 {
 namespace rgbd
@@ -62,7 +64,8 @@ enum
 const int sobelSize = 3;
 const double sobelScale = 1./8.;
 int normalWinSize = 5;
-int normalMethod = RgbdNormals::RGBD_NORMALS_METHOD_FALS;
+//int normalMethod = RgbdNormals::RGBD_NORMALS_METHOD_FALS;
+int normalMethod = RgbdNormals::RGBD_NORMALS_METHOD_LIYANG;
 
 static inline
 void setDefaultIterCounts(Mat& iterCounts)
@@ -191,6 +194,8 @@ void preparePyramidMask(const Mat& mask, const std::vector<Mat>& pyramidDepth, f
         else
             validMask = mask.clone();
 
+        //cout << "liyang test" << validMask << endl;
+        //exit(1);
         buildPyramid(validMask, pyramidMask, (int)pyramidDepth.size() - 1);
 
         for(size_t i = 0; i < pyramidMask.size(); i++)
@@ -665,6 +670,10 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
 
          diffs_ptr[correspIndex] = static_cast<float>(static_cast<int>(image0.at<uchar>(v0,u0)) -
                                                       static_cast<int>(image1.at<uchar>(v1,u1)));
+         //std::cout << "====================test=======================" << diffs_ptr[0] <<  std::endl;
+         //std::cout << static_cast<int>(image0.at<uchar>(v0,u0)) <<  std::endl;
+         //std::cout << static_cast<int>(image1.at<uchar>(v1,u1)) <<  std::endl;
+	 //exit(1);
          sigma += diffs_ptr[correspIndex] * diffs_ptr[correspIndex];
     }
     sigma = std::sqrt(sigma/correspsCount);
@@ -750,6 +759,8 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
 
         tps0_ptr[correspIndex] = tp0;
         diffs_ptr[correspIndex] = n1[0] * v.x + n1[1] * v.y + n1[2] * v.z;
+        //std::cout << "====================test=======================" << diffs_ptr[0] <<  std::endl;
+        //exit(1);
         sigma += diffs_ptr[correspIndex] * diffs_ptr[correspIndex];
     }
 
@@ -843,6 +854,7 @@ bool RGBDICPOdometryImpl(Mat& Rt, const Mat& initRt,
 
     const int minOverdetermScale = 20;
     const int minCorrespsCount = minOverdetermScale * transformDim;
+    const float icpWeight = 10.0;
 
     std::vector<Mat> pyramidCameraMatrix;
     buildPyramidCameraMatrix(cameraMatrix, (int)iterCounts.size(), pyramidCameraMatrix);
@@ -850,6 +862,9 @@ bool RGBDICPOdometryImpl(Mat& Rt, const Mat& initRt,
     Mat resultRt = initRt.empty() ? Mat::eye(4,4,CV_64FC1) : initRt.clone();
     Mat currRt, ksi;
 
+    //cout << "liyang test" << srcFrame->pyramidDepth[1] << endl;
+    //cout << "liyang test" << srcFrame->pyramidMask[1] << endl;
+    //exit(1);
     bool isOk = false;
     for(int level = (int)iterCounts.size() - 1; level >= 0; level--)
     {
@@ -899,6 +914,8 @@ bool RGBDICPOdometryImpl(Mat& Rt, const Mat& initRt,
                 calcICPLsmMatrices(srcFrame->pyramidCloud[level], resultRt,
                                    dstFrame->pyramidCloud[level], dstFrame->pyramidNormals[level],
                                    corresps_icp, AtA_icp, AtB_icp, icpEquationFuncPtr, transformDim);
+                //AtA += icpWeight * icpWeight * AtA_icp;
+                //AtB += icpWeight * AtB_icp;
                 AtA += AtA_icp;
                 AtB += AtB_icp;
             }
@@ -1350,6 +1367,8 @@ Size RgbdICPOdometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType
 
     preparePyramidCloud(frame->pyramidDepth, cameraMatrix, frame->pyramidCloud);
 
+    //cout << "liyang test" << frame->mask << endl;
+    //exit(1);
     if(cacheType & OdometryFrame::CACHE_DST)
     {
         if(frame->normals.empty())
@@ -1379,6 +1398,8 @@ Size RgbdICPOdometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType
         preparePyramidMask(frame->mask, frame->pyramidDepth, (float)minDepth, (float)maxDepth,
                            frame->pyramidNormals, frame->pyramidMask);
 
+        //cout << "liyang test" << frame->mask << endl;
+        //exit(1);
         preparePyramidSobel(frame->pyramidImage, 1, 0, frame->pyramid_dI_dx);
         preparePyramidSobel(frame->pyramidImage, 0, 1, frame->pyramid_dI_dy);
         preparePyramidTexturedMask(frame->pyramid_dI_dx, frame->pyramid_dI_dy,

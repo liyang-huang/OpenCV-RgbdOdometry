@@ -38,6 +38,7 @@ the use of this software, even if advised of the possibility of such damage.
 #include <list>
 #include <set>
 #include <limits>
+using namespace std;
 
 namespace cv
 {
@@ -205,6 +206,66 @@ namespace rgbd
     Mat K_, K_ori_;
     int window_size_;
     RgbdNormals::RGBD_NORMALS_METHOD method_;
+  };
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  template<typename T>
+  class LIYANG: public RgbdNormalsImpl
+  {
+  public:
+    typedef Vec<T, 3> Vec3T;
+    typedef Matx<T, 3, 3> Mat33T;
+
+    LIYANG(int rows, int cols, int window_size, int depth, const Mat &K,
+            RgbdNormals::RGBD_NORMALS_METHOD method)
+        :
+          RgbdNormalsImpl(rows, cols, window_size, depth, K, method)
+    {
+    }
+    ~LIYANG()
+    {
+    }
+
+    virtual void
+    cache()
+    {
+    }
+
+    virtual void
+    compute(const Mat& points3d, Mat & normals) const
+    {
+      for (int y = 0; y < rows_ - 1; ++y)
+      {
+        Vec3T *normal = normals.ptr<Vec3T>(y);
+        for (int x = 0; x < cols_ - 1; ++x, ++normal)
+        {
+		Vec3T du = points3d.at<Vec3T>(y,x+1) - points3d.at<Vec3T>(y,x);
+		Vec3T dv = points3d.at<Vec3T>(y+1,x) - points3d.at<Vec3T>(y,x);
+                normals.at<Vec3T>(y,x) = du.cross(dv);
+		T norm = sqrt(normals.at<Vec3T>(y,x)[0]*normals.at<Vec3T>(y,x)[0] + normals.at<Vec3T>(y,x)[1]*normals.at<Vec3T>(y,x)[1] +normals.at<Vec3T>(y,x)[2]*normals.at<Vec3T>(y,x)[2]);
+                normals.at<Vec3T>(y,x)[0] = normals.at<Vec3T>(y,x)[0] / norm;
+                normals.at<Vec3T>(y,x)[1] = normals.at<Vec3T>(y,x)[1] / norm;
+                normals.at<Vec3T>(y,x)[2] = normals.at<Vec3T>(y,x)[2] / norm;
+               //if(y==120&&x==20){
+               // //cout << "liyang test" << points3d.size() << endl;
+               // //cout << "liyang test" << points3d << endl;
+               // //cout << "liyang test" << points3d.at<Vec3T>(0,0) << endl;
+               // //cout << "liyang test" << points3d.at<Vec3T>(0,0)[0] << endl;
+               // cout << "liyang test" << normals.at<Vec3T>(y,x) << endl;
+               // cout << "liyang test" << du.cross(dv) << endl;
+               // cout << "liyang test" << du << endl;
+               // cout << "liyang test" << dv << endl;
+               // cout << "liyang test" << x << endl;
+               // cout << "liyang test" << y << endl;
+               // cout << "liyang test" << norm << endl;
+               // exit(1);}
+	}
+      }
+    }
+
+  private:
+
   };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -722,6 +783,14 @@ multiply_by_K_inv(const Matx<T, 3, 3> & K_inv, U a, U b, U c, Vec<T, 3> &res)
           delete reinterpret_cast<const FALS<double> *>(rgbd_normals_impl_);
         break;
       }
+      case (RgbdNormals::RGBD_NORMALS_METHOD_LIYANG):
+      {
+        if (depth == CV_32F)
+          delete reinterpret_cast<const LIYANG<float> *>(rgbd_normals_impl_);
+        else
+          delete reinterpret_cast<const LIYANG<double> *>(rgbd_normals_impl_);
+        break;
+      }
     }
   }
 
@@ -741,9 +810,17 @@ multiply_by_K_inv(const Matx<T, 3, 3> & K_inv, U a, U b, U c, Vec<T, 3> &res)
     CV_Assert(K_.cols == 3 && K.rows == 3 && (K.depth() == CV_32F || K.depth() == CV_64F));
     CV_Assert(
         method_in == RGBD_NORMALS_METHOD_FALS || method_in == RGBD_NORMALS_METHOD_LINEMOD
-        || method_in == RGBD_NORMALS_METHOD_SRI);
+        || method_in == RGBD_NORMALS_METHOD_SRI || method_in == RGBD_NORMALS_METHOD_LIYANG);
     switch (method_in)
     {
+      case (RGBD_NORMALS_METHOD_LIYANG):
+      {
+        if (depth == CV_32F)
+          rgbd_normals_impl_ = new LIYANG<float>(rows, cols, window_size, depth, K, RGBD_NORMALS_METHOD_LIYANG);
+        else
+          rgbd_normals_impl_ = new LIYANG<double>(rows, cols, window_size, depth, K, RGBD_NORMALS_METHOD_LIYANG);
+        break;
+      }
       case (RGBD_NORMALS_METHOD_FALS):
       {
         if (depth == CV_32F)
@@ -801,6 +878,12 @@ multiply_by_K_inv(const Matx<T, 3, 3> & K_inv, U a, U b, U c, Vec<T, 3> &res)
     // Either we have 3d points or a depth image
     switch (method_)
     {
+      case (RGBD_NORMALS_METHOD_LIYANG):
+      {
+        CV_Assert(points3d_ori.channels() == 3);
+        CV_Assert(points3d_ori.depth() == CV_32F || points3d_ori.depth() == CV_64F);
+        break;
+      }
       case (RGBD_NORMALS_METHOD_FALS):
       {
         CV_Assert(points3d_ori.channels() == 3);
@@ -825,7 +908,7 @@ multiply_by_K_inv(const Matx<T, 3, 3> & K_inv, U a, U b, U c, Vec<T, 3> &res)
 
     // Precompute something for RGBD_NORMALS_METHOD_SRI and RGBD_NORMALS_METHOD_FALS
     Mat points3d, radius;
-    if ((method_ == RGBD_NORMALS_METHOD_SRI) || (method_ == RGBD_NORMALS_METHOD_FALS))
+    if ((method_ == RGBD_NORMALS_METHOD_LIYANG) || (method_ == RGBD_NORMALS_METHOD_SRI) || (method_ == RGBD_NORMALS_METHOD_FALS))
     {
       // Make the points have the right depth
       if (points3d_ori.depth() == depth_)
@@ -848,6 +931,14 @@ multiply_by_K_inv(const Matx<T, 3, 3> & K_inv, U a, U b, U c, Vec<T, 3> &res)
     Mat normals = normals_out.getMat();
     switch (method_)
     {
+      case (RGBD_NORMALS_METHOD_LIYANG):
+      {
+        if (depth_ == CV_32F)
+          reinterpret_cast<const LIYANG<float> *>(rgbd_normals_impl_)->compute(points3d,  normals);
+        else
+          reinterpret_cast<const LIYANG<double> *>(rgbd_normals_impl_)->compute(points3d,  normals);
+        break;
+      }
       case (RGBD_NORMALS_METHOD_FALS):
       {
         if (depth_ == CV_32F)

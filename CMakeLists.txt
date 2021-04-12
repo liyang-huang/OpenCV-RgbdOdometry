@@ -18,7 +18,8 @@ else()
 endif()
 
 #opencv
-find_package(OpenCV 3.1)
+#find_package(OpenCV 3.1)
+find_package(OpenCV REQUIRED)
 if (OpenCV_FOUND)
 	message("Find your opencv succesfully")
 else()
@@ -40,7 +41,7 @@ file(GLOB TARGET_SRC2
 
 include_directories(${OpenCV_INCLUDE_DIRS} include)
 
-add_executable(rgbd-odometry ${TARGET_SRC})
+#add_executable(rgbd-odometry ${TARGET_SRC})
 add_executable(rgbd-odometry-liyang ${TARGET_SRC2})
-target_link_libraries (rgbd-odometry ${OpenCV_LIBS})
+#target_link_libraries (rgbd-odometry ${OpenCV_LIBS})
 target_link_libraries (rgbd-odometry-liyang ${OpenCV_LIBS})
